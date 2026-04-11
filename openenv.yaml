@@ -1,0 +1,130 @@
+spec_version: 1
+name: sre-gym
+version: "1.0.0"
+description: >
+  SRE-Gym: A production incident triage environment where an AI agent must
+  prioritise, investigate, and fix bugs from a live error queue. Features
+  cascading failure graphs, dynamic state spread, misleading severity signals,
+  and a fixed action budget — mirroring real SRE on-call workflows.
+author: Argonite3
+tags:
+  - openenv
+  - sre
+  - incident-response
+  - bug-triage
+  - reinforcement-learning
+
+action_space:
+  type: discrete
+  actions:
+    - name: investigate
+      description: >
+        Reveal hidden stack trace and metadata for a bug.
+        Costs 1 budget point.
+      parameters:
+        bug_id: string
+
+    - name: fix
+      description: >
+        Attempt to fix a bug. Costs 2 budget points.
+        If the root cause is unfixed, the bug returns next step.
+      parameters:
+        bug_id: string
+        fix_strategy:
+          enum: [hotfix, rollback, restart, patch]
+
+    - name: escalate
+      description: >
+        Escalate a bug to the on-call human team.
+        Costs 1 budget point.
+      parameters:
+        bug_id: string
+
+    - name: ignore
+      description: >
+        Mark a bug as noise and skip it.
+        Costs 0 budget points. Rewards +0.1 if bug is a red herring.
+      parameters:
+        bug_id: string
+
+    - name: noop
+      description: >
+        Do nothing this step.
+        Costs 0 budget points.
+
+observation_space:
+  type: structured
+  fields:
+    bugs:
+      type: list
+      items: PublicBugReport
+      description: >
+        List of visible bug reports. Stack traces are hidden
+        until the bug is investigated.
+    step_number:
+      type: integer
+      description: Current step in the episode.
+    budget_remaining:
+      type: integer
+      description: Action points remaining.
+    total_affected_users:
+      type: integer
+      description: Sum of affected_users across all unfixed bugs.
+    goal:
+      type: string
+      description: Human-readable objective for the task.
+    last_action_result:
+      type: string
+      description: Feedback message from the previous action.
+    task_id:
+      type: string
+      description: Identifier for the current task.
+    done:
+      type: boolean
+      description: Whether the episode has ended.
+
+reward:
+  type: continuous
+  range: [-2.0, 5.0]
+  description: >
+    Per-step reward: (affected_users / 1000) x urgency_weight for genuine fixes.
+    CRITICAL=2.0, HIGH=1.5, MEDIUM=1.0, LOW=0.5.
+    Penalises red-herring fixes (-0.2), wasted budget (-0.1), ignoring real bugs (-0.15).
+    Final bonus: +0.5 all criticals fixed, +0.2 no red herrings wasted, +0.05 per remaining budget.
+    Grader scores are always clamped to [0.0, 1.0].
+
+tasks:
+  - id: task1_easy
+    difficulty: easy
+    description: >
+      5 bugs with clear severity signals. No red herrings, no cascades.
+      Straightforward priority triage.
+    max_steps: 10
+    budget: 8
+
+  - id: task2_medium
+    difficulty: medium
+    description: >
+      15 bugs with misleading severity signals. 3 red herrings disguised
+      as CRITICAL alerts. 2 LOW-severity bugs silently corrupting data.
+      1 cascade pair.
+    max_steps: 15
+    budget: 12
+
+  - id: task3_hard
+    difficulty: hard
+    description: >
+      25 bugs with 3 cascading failure chains (depth up to 4), 5 red herrings,
+      and 11 independent bugs. Fixing symptoms wastes budget — root causes
+      must be identified. Agent cannot investigate everything.
+    max_steps: 20
+    budget: 15
+
+endpoints:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  tasks: GET /tasks
+  grader: POST /grader
+  baseline: POST /baseline
+  health: GET /health
