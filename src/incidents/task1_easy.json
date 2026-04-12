@@ -1,0 +1,74 @@
+{
+  "task_id": "task1_easy",
+  "description": "A small production incident queue. Triage 5 bugs by priority. Fix the most impactful ones within your budget.",
+  "budget": 8,
+  "max_steps": 10,
+  "goal": "Minimise total user impact. You have 8 action points. investigate() costs 1, fix() costs 2.",
+  "bugs": [
+    {
+      "bug_id": "BUG001",
+      "error_message": "CRITICAL: payment-service transactions failing with NullPointerException in PaymentProcessor.processCharge()",
+      "severity": "CRITICAL",
+      "frequency": 1000,
+      "affected_users": 500,
+      "stack_trace": "java.lang.NullPointerException: Cannot invoke method on null reference\n\tat com.sregym.payment.PaymentProcessor.processCharge(PaymentProcessor.java:142)\n\tat com.sregym.payment.PaymentProcessor.handleRequest(PaymentProcessor.java:87)\n\tat com.sregym.payment.gateway.ChargeHandler.execute(ChargeHandler.java:53)\n\tat com.sregym.core.RequestDispatcher.dispatch(RequestDispatcher.java:201)\n\tat com.sregym.core.http.HttpWorkerThread.run(HttpWorkerThread.java:44)\nCaused by: com.sregym.payment.config.MerchantConfigNotFoundException: Merchant config for key 'stripe_api_v3' not found in ConfigStore\n\tat com.sregym.payment.config.ConfigStore.get(ConfigStore.java:68)\n\tat com.sregym.payment.PaymentProcessor.loadMerchantConfig(PaymentProcessor.java:138)\n\t... 4 more",
+      "service": "payment-service",
+      "is_red_herring": false,
+      "root_cause_bug_id": null,
+      "child_bug_ids": [],
+      "spread_rate": 50.0
+    },
+    {
+      "bug_id": "BUG002",
+      "error_message": "HIGH: auth-service returning 401 Unauthorized for valid sessions — JWT token validation failure",
+      "severity": "HIGH",
+      "frequency": 480,
+      "affected_users": 200,
+      "stack_trace": "Traceback (most recent call last):\n  File \"/app/auth_service/handlers/token_handler.py\", line 94, in validate_token\n    decoded = jwt.decode(token, self.public_key, algorithms=[\"RS256\"])\n  File \"/usr/local/lib/python3.11/site-packages/jwt/api_jwt.py\", line 168, in decode\n    self._validate_claims(payload, merged_options, audience=audience)\n  File \"/usr/local/lib/python3.11/site-packages/jwt/api_jwt.py\", line 239, in _validate_claims\n    self._validate_exp(payload, now, leeway)\n  File \"/usr/local/lib/python3.11/site-packages/jwt/api_jwt.py\", line 280, in _validate_exp\n    raise ExpiredSignatureError(\"Signature has expired\")\njwt.exceptions.ExpiredSignatureError: Signature has expired\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/app/auth_service/middleware/auth_middleware.py\", line 42, in __call__\n    user = self.token_handler.validate_token(request.headers[\"Authorization\"])\n  File \"/app/auth_service/handlers/token_handler.py\", line 101, in validate_token\n    raise AuthenticationError(f\"Token expired: issued_at={iat}, exp={exp}, server_time={now}, clock_skew={skew}s\")\nauth_service.exceptions.AuthenticationError: Token expired: issued_at=1712400000, exp=1712403600, server_time=1712410800, clock_skew=7200s",
+      "service": "auth-service",
+      "is_red_herring": false,
+      "root_cause_bug_id": null,
+      "child_bug_ids": [],
+      "spread_rate": 20.0
+    },
+    {
+      "bug_id": "BUG003",
+      "error_message": "MEDIUM: notification-service email delivery delayed — queue depth exceeding threshold",
+      "severity": "MEDIUM",
+      "frequency": 150,
+      "affected_users": 50,
+      "stack_trace": "java.util.concurrent.RejectedExecutionException: Task com.sregym.notifications.workers.EmailSender@3a1c2b4f rejected from java.util.concurrent.ThreadPoolExecutor@7e5c8d12[Running, pool size = 20, active threads = 20, queued tasks = 10000, completed tasks = 45823]\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$AbortPolicy.rejectedExecution(ThreadPoolExecutor.java:2065)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.reject(ThreadPoolExecutor.java:833)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1365)\n\tat com.sregym.notifications.queue.EmailQueueConsumer.processNextBatch(EmailQueueConsumer.java:89)\n\tat com.sregym.notifications.queue.EmailQueueConsumer.run(EmailQueueConsumer.java:54)\nCaused by: com.sregym.notifications.smtp.SmtpConnectionPoolExhaustedException: All 20 SMTP connections in use; upstream relay smtp-relay.internal:587 response time degraded to 12400ms (threshold: 2000ms)\n\tat com.sregym.notifications.smtp.SmtpConnectionPool.acquire(SmtpConnectionPool.java:112)\n\t... 3 more",
+      "service": "notification-service",
+      "is_red_herring": false,
+      "root_cause_bug_id": null,
+      "child_bug_ids": [],
+      "spread_rate": 5.0
+    },
+    {
+      "bug_id": "BUG004",
+      "error_message": "LOW: analytics-service dashboard requests timing out after 30s",
+      "severity": "LOW",
+      "frequency": 25,
+      "affected_users": 5,
+      "stack_trace": "Traceback (most recent call last):\n  File \"/app/analytics_service/api/dashboard.py\", line 67, in get_dashboard_data\n    result = await asyncio.wait_for(self.query_engine.execute(query), timeout=30.0)\n  File \"/usr/local/lib/python3.11/asyncio/tasks.py\", line 489, in wait_for\n    raise asyncio.TimeoutError()\nasyncio.TimeoutError\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/app/analytics_service/api/dashboard.py\", line 72, in get_dashboard_data\n    raise DashboardTimeoutError(f\"Query exceeded 30s timeout: query_hash={query.hash}, table=events_v2, scan_range=30d, rows_estimated=48M\")\nanalytics_service.exceptions.DashboardTimeoutError: Query exceeded 30s timeout: query_hash=a4f9c2e1, table=events_v2, scan_range=30d, rows_estimated=48M",
+      "service": "analytics-service",
+      "is_red_herring": false,
+      "root_cause_bug_id": null,
+      "child_bug_ids": [],
+      "spread_rate": 0.0
+    },
+    {
+      "bug_id": "BUG005",
+      "error_message": "LOW: logging-service log rotation warning — disk usage approaching threshold",
+      "severity": "LOW",
+      "frequency": 10,
+      "affected_users": 2,
+      "stack_trace": "WARNING  2024-04-07 03:14:22,847 [log-rotator-thread-1] com.sregym.logging.rotation.LogRotator - Log rotation check failed\njava.io.IOException: Insufficient disk space for rotation\n\tat com.sregym.logging.rotation.LogRotator.rotate(LogRotator.java:156)\n\tat com.sregym.logging.rotation.LogRotator.checkAndRotate(LogRotator.java:98)\n\tat com.sregym.logging.rotation.RotationScheduler.lambda$schedule$0(RotationScheduler.java:45)\n\tat java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)\nContext: { volume: /var/log/sregym, used_bytes: 48318382080, total_bytes: 53687091200, used_pct: 90.0, retention_days: 30, oldest_log: \"app.log.2024-03-08.gz\" }",
+      "service": "logging-service",
+      "is_red_herring": false,
+      "root_cause_bug_id": null,
+      "child_bug_ids": [],
+      "spread_rate": 0.0
+    }
+  ]
+}
